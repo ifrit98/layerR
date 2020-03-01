@@ -15,6 +15,7 @@ is_vec2 <- function(x) is_list(x) | is_vec(x)
 is_sentinel <- function(x)
   c(is_empty(x), is.na(x), is.nan(x), is.null(x), is.infinite(x)) %>% any()
 
+
 #' Convencience fun to one-liner a model with in-outs
 #' @export
 build_and_compile <-
@@ -29,3 +30,42 @@ build_and_compile <-
                      metric = metric)
     model
   }
+
+
+pow2_up_to <- function(n) {
+  x <- floor(log2(n))
+  powers_of_2(x)
+}
+
+
+powers_of_2 <- function(x) {
+  x <- as.integer(x)
+  l <- seq(1L, x)
+  vapply(l, function(p) 2^p, 0)
+}
+
+
+pow2_range <- function(min, max) {
+  min    <- nearest_pow2(min)
+  powers <- pow2_up_to(max(min, max))
+  idx    <- which(powers == min)
+
+  powers[idx:length(powers)]
+}
+
+
+nearest_pow2 <- function(n) {
+  fl <- floor(log2(n))
+  cl <- ceiling(log2(n))
+
+  pows <- powers_of_2(cl)
+  lo <- pows[fl] %>% {abs(n - .)}
+  hi <- pows[cl] %>% {abs(n - .)}
+
+  if (lo > hi)
+    return(pows[cl])
+  else
+    return(pows[fl])
+}
+
+

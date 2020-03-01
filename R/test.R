@@ -1,4 +1,6 @@
 
+
+
 keras_model_test <- function(num_classes,
                              use_bn = FALSE, use_dp = FALSE,
                              name = NULL) {
@@ -186,7 +188,7 @@ load_mnist <- function() {
 
   # Convert class vectors to binary class matrices
   y_train <- to_categorical(y_train, num_classes)
-  y_test <- to_categorical(y_test, num_classes)
+  y_test  <- to_categorical(y_test, num_classes)
 
   list(
     x_train = x_train,
@@ -202,35 +204,29 @@ load_mnist <- function() {
 
 
 #' @importFrom zeallot %<-%
-test <-
-  function() {
+test_autoencoder <- function() {
+    source("R/utils.R")
+    source("R/autoencoder.R")
 
     library(zeallot)
-    # data <- load_mnist()
+    library(keras)
+
     c(x_train, y_train, x_test, y_test,
       batch_size, epochs, num_classes) %<-% load_mnist()
 
-    (model <- autoencoder_model())
-    (model <- autoencoder_modelV2())
-    (model <- keras_model_test(10))
-    (model <- keras_model_test2(10))
-    (model <- layer_test_model())
-    (model <- layer_test2_model())
-
+    (model <- autoencoder_model(hidden_dims = 64))
 
     model %>% compile(
       loss = 'mse',
-      optimizer = 'adagrad',
-      metrics = c('accuracy')
+      optimizer = 'adagrad'
     )
 
     model %>% fit(x_train,
                   x_train,
                   epochs = epochs,
+                  steps_per_epoch = 100,
                   batch_size = batch_size,
                   validation_data = list(x_test, x_test))
 
-  }
-# CONCLUSION:
-#  KerasLayer subclasses do not track weights of nested layers,
-#  KerasModel subclasses do.
+   }
+
