@@ -3,7 +3,7 @@
 EncoderDecoder <-
   R6::R6Class("EncoderDecoder",
 
-    inherit = KerasLayer,
+    inherit = keras::KerasLayer,
 
     public = list(
       hidden_dim = NULL,
@@ -54,6 +54,8 @@ EncoderDecoder <-
   )
 
 
+#' @importFrom keras create_layer
+#' @export
 layer_encoder_decoder <-
   function(object,
            mode = 'encoder',
@@ -62,15 +64,17 @@ layer_encoder_decoder <-
            name = NULL,
            trainable = TRUE) {
 
-    create_layer(EncoderDecoder,
-                 object,
-                 list(
-                   mode = tolower(mode),
-                   hidden_dim = as.integer(hidden_dim),
-                   original_dim = as.integer(original_dim),
-                   name = name,
-                   trainable = trainable
-                 ))
+    keras::create_layer(
+      EncoderDecoder,
+      object,
+      list(
+        mode = tolower(mode),
+        hidden_dim = as.integer(hidden_dim),
+        original_dim = as.integer(original_dim),
+        name = name,
+        trainable = trainable
+      )
+    )
   }
 
 
@@ -78,7 +82,7 @@ layer_encoder_decoder <-
 EncoderDecoderV2 <-
   R6::R6Class("EncoderDecoderV2",
 
-              inherit = KerasLayer,
+              inherit = keras::KerasLayer,
 
               public = list(
                 mode = NULL,
@@ -105,13 +109,13 @@ EncoderDecoderV2 <-
 
                 build = function(input_shape) {
 
-                  if(is_empty(self$original_dim) & self$mode == "decoder")
+                  if(rlang::is_empty(self$original_dim) & self$mode == "decoder")
                     stop("Original dimension must be supplied if mode == \"decoder\".")
 
-                  if(self$mode == "decoder" & is_empty(self$code_dim))
+                  if(self$mode == "decoder" & rlang::is_empty(self$code_dim))
                     stop("Code dim must be supplied when mode == \"decoder\".")
 
-                  if(is_empty(self$original_dim))
+                  if(rlang::is_empty(self$original_dim))
                     self$original_dim <- input_shape[[length(input_shape)]]
 
                   if (self$mode == "decoder")
@@ -140,7 +144,7 @@ EncoderDecoderV2 <-
                   }
 
                   self$hidden_layers <-
-                    map2(input_dims, self$hidden_dims, get_layer)
+                    purrr::map2(input_dims, self$hidden_dims, get_layer)
 
                 },
 
@@ -168,6 +172,8 @@ EncoderDecoderV2 <-
               )
   )
 
+
+#' @export
 layer_encoder_decoderV2 <-
   function(object,
            mode = 'encoder',
@@ -195,12 +201,14 @@ layer_encoder_decoderV2 <-
 
 
 
-
+#' @export
 autoencoder_modelV2 <-
   function(num_layers = 3,
            hidden_dims = c(512, 256, 64),
            original_dim = 784,
            name = NULL) {
+    library(tensorflow)
+    library(keras)
 
     num_layers <- as.integer(num_layers)
     original_dim <- as.integer(original_dim)
@@ -230,8 +238,7 @@ autoencoder_modelV2 <-
                                 code_dim = code_dim)
 
       # Call
-      function(x, mask = NULL) {
-        browser()
+      function(x, mask = NULL, training = FALSE) {
         x <- self$encoder_layer(x)
         x <- self$decoder_layer(x)
 
@@ -241,6 +248,8 @@ autoencoder_modelV2 <-
   }
 
 
+#' @importFrom keras keras_model_custom create_layer
+#' @export
 autoencoder_model <-
   function(num_layers = 3,
            hidden_dim = c(512, 256, 64),

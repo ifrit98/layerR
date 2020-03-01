@@ -156,28 +156,81 @@ layer_test2_model <- function() {
 
 
 
-source("utils/load_mnist.R")
 
-(model <- autoencoder_model())
-(model <- autoencoder_modelV2())
-(model <- keras_model_test(10))
-(model <- keras_model_test2(10))
-(model <- layer_test_model())
-(model <- layer_test2_model())
+load_mnist <- function() {
+  library(keras)
+
+  # Data Preparation --------------------------------------------------------
+
+  batch_size <- 128
+  num_classes <- 10
+  epochs <- 40
+
+  # The data, shuffled and split between train and test sets
+  mnist <- dataset_mnist()
+  x_train <- mnist$train$x
+  y_train <- mnist$train$y
+  x_test <- mnist$test$x
+  y_test <- mnist$test$y
+
+  # Redimension
+  x_train <- array_reshape(x_train, c(nrow(x_train), 784))
+  x_test <- array_reshape(x_test, c(nrow(x_test), 784))
+
+  # Transform RGB values into [0,1] range
+  x_train <- x_train / 255
+  x_test <- x_test / 255
+
+  cat(nrow(x_train), 'train samples\n')
+  cat(nrow(x_test), 'test samples\n')
+
+  # Convert class vectors to binary class matrices
+  y_train <- to_categorical(y_train, num_classes)
+  y_test <- to_categorical(y_test, num_classes)
+
+  list(
+    x_train = x_train,
+    y_train = y_train,
+    x_test = x_test,
+    y_test = y_test,
+    batch_size = batch_size,
+    epochs = epochs,
+    num_classes = num_classes
+  )
+}
 
 
-model %>% compile(
-  loss = 'mse',
-  optimizer = 'adagrad',
-  metrics = c('accuracy')
-)
 
-model %>% fit(x_train,
-              x_train,
-              epochs = 5,
-              batch_size = 512,
-              validation_data = list(x_test, x_test))
+#' @importFrom zeallot %<-%
+test <-
+  function() {
 
+    library(zeallot)
+    # data <- load_mnist()
+    c(x_train, y_train, x_test, y_test,
+      batch_size, epochs, num_classes) %<-% load_mnist()
+
+    (model <- autoencoder_model())
+    (model <- autoencoder_modelV2())
+    (model <- keras_model_test(10))
+    (model <- keras_model_test2(10))
+    (model <- layer_test_model())
+    (model <- layer_test2_model())
+
+
+    model %>% compile(
+      loss = 'mse',
+      optimizer = 'adagrad',
+      metrics = c('accuracy')
+    )
+
+    model %>% fit(x_train,
+                  x_train,
+                  epochs = epochs,
+                  batch_size = batch_size,
+                  validation_data = list(x_test, x_test))
+
+  }
 # CONCLUSION:
 #  KerasLayer subclasses do not track weights of nested layers,
 #  KerasModel subclasses do.
