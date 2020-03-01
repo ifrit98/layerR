@@ -1,4 +1,4 @@
-# TODO: Update encoder/decoder layers with batchnorm and dropout options
+
 
 EncoderDecoder <-
   R6::R6Class("EncoderDecoder",
@@ -13,19 +13,25 @@ EncoderDecoder <-
       code_dim = NULL,
       activation = NULL,
       hidden_layers = NULL,
+      regularizer = NULL,
+      batchnorm = NULL,
 
       initialize = function(mode,
                             num_layers,
                             hidden_dims,
                             original_dim,
                             code_dim,
-                            activation) {
+                            activation,
+                            regularizer,
+                            batchnorm) {
         self$mode         <- mode
         self$num_layers   <- num_layers
         self$hidden_dims  <- hidden_dims
         self$original_dim <- original_dim
         self$code_dim     <- code_dim
         self$activation   <- activation
+        self$regularizer  <- regularizer
+        self$batchnorm    <- batchnorm
       },
 
       build = function(input_shape) {
@@ -53,12 +59,14 @@ EncoderDecoder <-
             name = "W_",
             shape = list(in_features, out_features),
             initializer = initializer_he_normal(),
+            regularizer = self$regularizer,
             trainable = TRUE)
 
           b <- self$add_weight(
             name = "b_",
             shape = list(out_features),
             initializer = initializer_zeros(),
+            regularizer = self$regularizer,
             trainable = TRUE)
 
           c(W, b)
@@ -76,7 +84,12 @@ EncoderDecoder <-
         for (layer in self$hidden_layers) {
           W   <- layer[[1]]
           b   <- layer[[2]]
+
           out <- tf$add(tf$matmul(out, W), b)
+
+          if (self$batchnorm)
+            out <- layer_batch_normalization(out, renorm = TRUE)
+
           out <- self$activation(out)
         }
 
@@ -103,6 +116,8 @@ layer_encoder_decoder <-
            original_dim = NULL,
            code_dim = NULL,
            activation = 'relu',
+           regularizer = NULL,
+           batchnorm = FALSE,
            name = NULL,
            trainable = TRUE) {
 
@@ -115,6 +130,8 @@ layer_encoder_decoder <-
                    original_dim = as.integer(original_dim),
                    code_dim = as.integer(code_dim),
                    activation = tf$keras$activations$get(activation),
+                   regularizer = tf$keras$regularizers$get(regularizer),
+                   batchnorm = as.logical(batchnorm),
                    name = name,
                    trainable = trainable
                  ))
@@ -122,14 +139,27 @@ layer_encoder_decoder <-
 
 
 
+#' Autoencoder keras model wrapper over simple dense layers
+#'
+#' @param original_dim integer denoting original dimensionality of input space
+#' @param hidden_dims may be an integer, or a list containing desired units for
+#' encoder step.  `list(512, 256, 64)` will give a `code_dimension` of `64`
+#' @param num_layers integer, number of layers to use in each encoder decoder.
+#'  [num_layers] must equal [length(hidden_dims)] unless hidden_dims is a scalar,
+#'  in which case, hidden_dims is automatically computed based on nearest powers of 2
+#' @param regularizer callable or string name of keras regularizer
+#' @param use_batchnorm bool indicating use of batchnorm layer inbetween each dense
+#' @param name (optional) string to name the model
 #' @export
 autoencoder_model <-
-  function(num_layers = 3,
-           hidden_dims = c(512, 256, 64),
-           original_dim = 784,
+  function(original_dim,
+           hidden_dims,
+           num_layers = 3,
+           regularizer = NULL,
+           use_batchnorm = FALSE,
            name = NULL) {
-    library(tensorflow)
-    library(keras)
+    # library(tensorflow)
+    # library(keras)
 
     num_layers   <- as.integer(num_layers)
     original_dim <- as.integer(original_dim)
@@ -149,7 +179,8 @@ autoencoder_model <-
       self$encoder_layer <-
         layer_encoder_decoder(mode = "encoder",
                               num_layers = num_layers,
-                              hidden_dims = hidden_dims)
+                              hidden_dims = hidden_dims,
+                              batchnorm = use_batchnorm)
 
       hidden_dims <- rev(hidden_dims)
       code_dim    <- hidden_dims[[1]]
@@ -159,7 +190,8 @@ autoencoder_model <-
                               num_layers = num_layers,
                               hidden_dims = hidden_dims,
                               original_dim = original_dim,
-                              code_dim = code_dim)
+                              code_dim = code_dim,
+                              batchnorm = use_batchnorm)
 
       # Call
       function(x, mask = NULL, training = FALSE) {

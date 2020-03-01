@@ -214,7 +214,9 @@ test_autoencoder <- function() {
     c(x_train, y_train, x_test, y_test,
       batch_size, epochs, num_classes) %<-% load_mnist()
 
-    (model <- autoencoder_model(hidden_dims = 64))
+    (model <- autoencoder_model(hidden_dims = 64,
+                                use_batchnorm = FALSE,
+                                regularizer = regularizer_l1()))
 
     model %>% compile(
       loss = 'mse',
@@ -224,9 +226,8 @@ test_autoencoder <- function() {
     model %>% fit(x_train,
                   x_train,
                   epochs = epochs,
-                  steps_per_epoch = 100,
                   batch_size = batch_size,
                   validation_data = list(x_test, x_test))
 
-   }
+    }
 
